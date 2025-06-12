@@ -1,0 +1,17 @@
+[package]
+name = "capnp-rpc-example"
+version = "0.1.0"
+edition = "2024"
+description = "simple capnp rpc example"
+authors = ["Brad Myrick <brad@deepgreenx.com>"]
+
+[dependencies]
+capnp = "0.21.1"
+capnp-rpc = "0.21.0"
+futures = "0.3.31"
+futures-util = "0.3.31"
+tokio = {version="1.45.1", features=["full"]}
+tokio-util = {version="0.7.15", features=["compat"]}
+
+[build-dependencies]
+capnpc = "0.21.0"

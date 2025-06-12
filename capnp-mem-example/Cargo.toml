@@ -1,0 +1,12 @@
+[package]
+name = "capnp-mem-example"
+version = "0.1.0"
+edition = "2024"
+description = "simple capnp in memory example"
+authors = ["Brad Myrick <brad@deepgreenx.com>"]
+
+[dependencies]
+capnp = "0.21.1"
+
+[build-dependencies]
+capnpc = "0.21.0"
