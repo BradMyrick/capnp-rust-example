@@ -24,26 +24,32 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     println!("Connecting to {}", addr);
-
+    // Create a LocalSet to run the async code.
+    // this is needed to run the tokio tasks in a single-threaded context.
+    // single threaded context is required for capnp_rpc to work correctly.
     let local = LocalSet::new();
-    local.run_until(async move {
+    local.run_until(async move { 
+        // need a Tokio runtime to run the async code.
         let stream = tokio::net::TcpStream::connect(&addr).await?;
         stream.set_nodelay(true)?;
-
         let (reader, writer) =
             tokio_util::compat::TokioAsyncReadCompatExt::compat(stream).split();
+        // Create a VatNetwork for the RPC system.
+        // two-party vat network will receive data on `input_stream` 
+        // and send data on `output_stream`
         let network = twoparty::VatNetwork::new(
             futures::io::BufReader::new(reader),
             futures::io::BufWriter::new(writer),
             rpc_twoparty_capnp::Side::Client,
             Default::default(),
         );
-
+        // Initialize the RPC system with the network and no bootstrap capability.
         let mut rpc_system = RpcSystem::new(Box::new(network), None);
 
         // Bootstrap to the Root capability.
         let root_client: root::Client = rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server);
 
+        // Spawn the RPC system to run in the background.
         tokio::task::spawn_local(rpc_system);
 
         // Get the Auth capability from Root.
@@ -55,6 +61,7 @@ pub async fn run() -> Result<(), Box<dyn std::error::Error>> {
         let mut login_req = auth_client.login_request();
         login_req.get().set_password(password);
 
+        // Send the login request and await the response.
         let login_resp = login_req.send().promise.await?;
         let token_client = login_resp.get()?.get_token()?;
 
@@ -81,21 +88,22 @@ pub async fn fail() -> Result<(), Box<dyn std::error::Error>> {
         .expect("could not parse address");
 
     println!("Connecting to {} (fail example)", addr);
-
+    // Create a LocalSet to run the async code.
     let local = LocalSet::new();
     local.run_until(async move {
+        // need a Tokio runtime to run the async code.
         let stream = tokio::net::TcpStream::connect(&addr).await?;
         stream.set_nodelay(true)?;
-
         let (reader, writer) =
             tokio_util::compat::TokioAsyncReadCompatExt::compat(stream).split();
+        // Create a VatNetwork for the RPC system.
         let network = twoparty::VatNetwork::new(
             futures::io::BufReader::new(reader),
             futures::io::BufWriter::new(writer),
             rpc_twoparty_capnp::Side::Client,
             Default::default(),
         );
-
+        // Initialize the RPC system with the network and no bootstrap capability.
         let mut rpc_system = RpcSystem::new(Box::new(network), None);
 
         // Bootstrap to the Root capability.
@@ -103,11 +111,15 @@ pub async fn fail() -> Result<(), Box<dyn std::error::Error>> {
 
         tokio::task::spawn_local(rpc_system);
 
-        // Attempt to use a Token capability without having one.
-        // simulating a missing capability by not obtaining it.
-        let maybe_token: Option<token::Client> = None;
-
-        if let Some(token) = maybe_token {
+        // SKIP AUTHENTICATION
+        //
+        // since we did not authenticate, we do not have a token capability.
+        // we can't forge a token capability, because the server will not recognize it.
+        
+        // Attempt to forge a Token capability. 
+        let forged_token: Option<token::Client> = None;
+        // Attempt to use the forged token.
+        if let Some(token) = forged_token {
             let req = token.mint_request();
             let reply = req.send().promise.await?;
             println!("Unexpected success: {:?}", reply.get()?.get_result()?);

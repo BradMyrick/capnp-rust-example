@@ -7,7 +7,7 @@ use capnp::message::{Builder, ReaderOptions};
 use capnp::serialize;
 
 fn main() {
-    // Build a FooBar message
+    // Build a message
     let mut message = Builder::new_default();
     let mut tkn = message.init_root::<token::Builder>();
     tkn.set_name("Oko");
